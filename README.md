@@ -1,4 +1,0 @@
-OCaml
-=====
-
-Programmation fonctionnelle avance
