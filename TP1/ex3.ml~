@@ -1,0 +1,40 @@
+type head_elem = Title of string
+                 | Style of string
+                     
+type body_elem =
+  A of string * body_elem list
+| B of body_elem list
+| P of body_elem list
+| Ul of body_elem list list
+| Text of string
+
+type document = { head : head_elem list;
+                  body : body_elem list}
+
+
+let doc = { head = [Title "My page"; Style "a { text-decoration: underline; }"];
+    body = [
+      P [Text "Un paragraph de texte(dont un texte";
+         B [Text "en gras"]; Text ")" ];
+      Ul[ [Text "Premier point"];
+          [Text "Le"; A ("http://www.google.com", [Text "Deuxieme Point"]);
+           Text "est un lien" ]
+         ]
+                   ]
+          
+};;
+
+
+let rec 
+
+
+let rec valid_head l =
+  match l with
+  | [] -> false
+  | Title _ :: ll -> not (has_title ll)
+  | Style _ :: ll -> valid_head ll
+;;
+
+let rec has_link e =
+  match e with
+  | 
