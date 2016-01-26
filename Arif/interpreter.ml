@@ -38,13 +38,13 @@ module Env = Map.Make(String)
 *)
 let get_bool pos v =
   match v with
-    | Vbool b -> b
-    | _       -> error Interpretation_error pos
+  | Vbool b -> b
+  | _       -> error Interpretation_error pos
 
 let get_int pos v =
   match v with
   | Vint i -> i
-  |_       -> error Interpretation_error pos
+  | _      -> error Interpretation_error pos
 
 
 (* Voici le cœur de l'interpréteur, qu'il va falloir compléter. Cette fonction
@@ -61,6 +61,10 @@ let rec interpret_expr env e =
     | Eunop (Unot, e)   ->
       let b = get_bool e.pos (interpret_expr env e) in
       Vbool (not b)
+
+    | Eunop (Uminus, e) ->
+       let b = get_int e.pos (interpret_expr env e) in
+       Vint (-b)
 
     | Eprint_newline e ->
       let _ = interpret_expr env e in
@@ -80,11 +84,10 @@ let rec interpret_expr env e =
       | Cunit -> Vunit
       end 
 
-    | Ebinop (binop, e1, e2) ->
+    | Ebinop ((Badd|Bsub|Bdiv|Bmul) as op, e1, e2) ->
        let a = get_int e1.pos (interpret_expr env e1) and
            b = get_int e2.pos (interpret_expr env e2) in
-       Vint (match binop with 
-             | Beq
+       Vint (match op with 
              | Badd -> a + b
              | Bsub -> a - b
              | Bdiv -> a / b
@@ -92,7 +95,38 @@ let rec interpret_expr env e =
              | _    -> failwith "this system is not supported"
             )
       
+    | Ebinop ((Beq|Bneq|Blt|Ble|Bgt|Bge) as op, e1, e2) ->
+       let a = get_int e1.pos (interpret_expr env e1) and
+           b = get_int e2.pos (interpret_expr env e2) in
+       Vbool (match op with
+             | Beq -> a = b
+             | Bneq -> a <> b
+             | Blt -> a < b
+             | Ble -> a <= b
+             | Bgt -> a > b
+             | Bge -> a >= b
+             | _   -> failwith "this system is not supported"
+             )
+      
+    | Ebinop ((Band|Bor) as op, e1, e2) ->
+       let a = get_bool e1.pos (interpret_expr env e1) and 
+           b = get_bool e2.pos (interpret_expr env e2)
+       Vbool (match op with
+              | Band -> a&&b
+              | Bor -> a||b 
+             )
+
+    | Eletin (a, b, c) -> let env = Env.add a (interpret_expr env b) env in interprete_expr env c 
+
+    | Eif (a, b, c) -> 
+       let d = get_bool a.pos(interpret_expr env a) in
+       match d with 
+       | true -> interpret_expr env b
+       | false -> interpret_expr env c
+
     | Eseq l -> interpret_seq env l
+
+    | Eident -> not_implemented()
       
     | _ -> not_implemented ()
 
@@ -115,4 +149,5 @@ let rec interpret_prog (p : Ast.prog) : unit =
   match p with
   | []    -> ()
   | Icompute e :: pp -> let _ = interpret_expr Env.empty e in interpret_prog pp
-  | Ilet (id, e) :: pp -> not_implemented()
+  | Ilet (id, e) :: pp ->
+     let env = Env.add id (interpret_expr env e) env in ocamltropdifficile env pp in ocamltropdifficile Env.empty p
