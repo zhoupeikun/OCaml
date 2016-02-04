@@ -1,0 +1,12 @@
+mips.cmi :
+mips.cmo : mips.cmi
+mips.cmx : mips.cmi
+ast.cmi :
+error.cmo : ast.cmi
+error.cmx : ast.cmi
+interpreter.cmo : error.cmo ast.cmi
+interpreter.cmx : error.cmx ast.cmi
+compile.cmo : mips.cmi ast.cmi
+compile.cmx : mips.cmx ast.cmi
+main.cmo : mips.cmi interpreter.cmo error.cmo compile.cmo
+main.cmx : mips.cmx interpreter.cmx error.cmx compile.cmx
