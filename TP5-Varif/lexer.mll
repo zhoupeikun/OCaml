@@ -23,10 +23,13 @@
 	"if",            IF;
 	"then",          THEN;
 	"else",          ELSE;
+	(* Variables *)
+	"let",           LET;
+	"in",            IN;
       ];
     fun s ->
       try Hashtbl.find h s
-      with Not_found -> error (Lexical_error s) pos
+      with Not_found -> IDENT(s)
 	
   let comment_cpt = ref 0
 
@@ -84,7 +87,9 @@ rule token = parse
       { AND }
   | "||"
       { OR }
-(* Mots-clés *)
+  (* Mots-clés *)
+  | "="
+      { EQUAL }
   | ident
       { keyword (current_pos lexbuf) (lexeme lexbuf) }
 (* Fin *)

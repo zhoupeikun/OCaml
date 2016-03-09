@@ -34,8 +34,12 @@
 %token SLASH
 %token STAR
 %token THEN
+%token LET
+%token IN
+%token EQUAL
 
 %nonassoc ELSE
+%right EQUAL IN
 %left OR
 %left AND
 %left COMP NEQ DOUBLE_EQUAL
@@ -62,7 +66,9 @@ instr_seq:
 instr:
 /* Arith */
 | expr EOI
-    { Icompute $1 }
+       { Icompute $1 }
+| LET IDENT EQUAL expr EOI
+      { Ilet ($2, $4) }
 ;
 
 simple_expr:
@@ -71,6 +77,8 @@ simple_expr:
     { mk_node $1 }
 | LPAREN expr RPAREN
     { $2 }
+| IDENT
+    { mk_node (Eident($1))}
 
 expr:
 /* Arith */
@@ -106,7 +114,8 @@ expr:
     { mk_node (Ebinop (Band, $1, $3)) }
 | expr OR expr
     { mk_node (Ebinop (Bor, $1, $3)) }
-
+| LET IDENT EQUAL expr IN expr
+    { mk_node (Eletin ($2, $4, $6))}
 ;
 
 

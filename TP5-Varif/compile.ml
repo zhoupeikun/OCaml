@@ -7,6 +7,8 @@ open Format
 let word_size   = 4
 let data_size   = word_size
 
+let nb_Gvar = ref 0
+
 let not_implemented() = failwith "Not implemented"
 
 (* Création d'une nouvelle étiquette pour les branchements. *)
@@ -57,7 +59,7 @@ let pop reg =
    venv -> int -> node_expr -> text
 *)
 
-let rec compile_expr e =
+let rec compile_expr env nxt_local e =
   match e.expr with
 
     | Econst c -> begin
@@ -69,32 +71,32 @@ let rec compile_expr e =
     end
 
     | Eunop (op, e) ->
-      let e_code = compile_expr e in
+      let e_code = compile_expr env nxt_local e in
       e_code
       @@ pop v0
       @@ (match op with
-	| Unot   -> li v1 1 @@ sub v0 v1 oreg v0
-	| Uminus -> sub v0 zero oreg v0
-      ) @@ push v0
+	      | Unot   -> li v1 1 @@ sub v0 v1 oreg v0
+	      | Uminus -> sub v0 zero oreg v0
+         ) @@ push v0
 
     | Ebinop ((Band | Bor) as op, e1, e2) ->
-      let e1_code = compile_expr e1
-      and e2_code = compile_expr e2
+      let e1_code = compile_expr env nxt_local e1
+      and e2_code = compile_expr env nxt_local e2
       and lbl_end = new_label ()
       in
       e1_code
       @@ peek v0
       @@ (match op with
-	| Band -> beqz v0 lbl_end
-	| Bor  -> bnez v0 lbl_end
-	| _    -> assert false)
+	      | Band -> beqz v0 lbl_end
+	      | Bor  -> bnez v0 lbl_end
+	      | _    -> assert false)
       @@ pop zero
       @@ e2_code
       @@ label lbl_end
 
     | Ebinop (op, e1, e2) ->
-      let e1_code = compile_expr e1
-      and e2_code = compile_expr e2
+      let e1_code = compile_expr env nxt_local e1
+      and e2_code = compile_expr env nxt_local e2
       in
       e2_code
       @@ e1_code
@@ -115,9 +117,9 @@ let rec compile_expr e =
       ) @@ push v0
 	
     | Eif (cond, e_then, e_else) ->
-      let cond_code = compile_expr cond
-      and then_code = compile_expr e_then
-      and else_code = compile_expr e_else
+      let cond_code = compile_expr env nxt_local cond
+      and then_code = compile_expr env nxt_local e_then
+      and else_code = compile_expr env nxt_local e_else
       and lbl_else  = new_label ()
       and lbl_end   = new_label ()
       in
@@ -131,14 +133,34 @@ let rec compile_expr e =
       @@ label lbl_end
 
     | Eprint_int e ->
-      let e_code = compile_expr e in
+      let e_code = compile_expr env nxt_local e in
       e_code
       @@ jal "print_int"
       
     | Eprint_newline e ->
-      let e_code = compile_expr e in
+      let e_code = compile_expr env nxt_local e in
       e_code
       @@ jal "print_newline"
+
+    | Eident ident ->
+       let v1 = Env.find ident env in
+       ( match v1 with
+         | Global_var k -> lw v0 areg((k * data_size), gp)
+         | Local_var  k -> lw v0 areg((k * data_size), fp)
+       )@@ push v0
+
+    | Eletin (id, e1, e2) ->
+       let e1_code = compile_expr env (nxt_local) e1 in
+       let e2_code = compile_expr (
+                         Env.add id (Local_var(nxt_local)) env) (nxt_local-1) e2 in
+       e1_code 
+         @@ pop v0
+         @@ sw v0 areg(nxt_local * data_size, fp)
+         @@ e2_code
+         @@ lw v0 areg(0, sp)
+         @@ add sp sp oi data_size
+         @@ sw v0 areg(0, sp) 
+       
 
     | _ -> not_implemented()
 	
@@ -151,14 +173,25 @@ let rec compile_expr e =
    venv -> int -> instr list -> text
 *)
 
-let rec compile_instr_list il =
+let rec compile_instr_list env nxt_global il =
   match il with
     | []       -> nop
 
     | Icompute e :: il ->
-      let e_code  = compile_expr e in
-      let il_code = compile_instr_list il in
+      let e_code  = compile_expr env 0 e in
+      let il_code = compile_instr_list env nxt_global il in
       e_code @@ pop zero @@ il_code
+
+    | Ilet(id, e) :: il ->
+       let e_code = compile_expr env 0 e in
+       let il_code = compile_instr_list
+                       (Env.add id (Global_var(nxt_global)) env) (nxt_global+1) il in
+       nb_Gvar := !nb_Gvar + 1;
+       e_code
+         @@ pop v0
+         @@ sw v0 areg (nxt_global * data_size, gp)
+         @@ il_code
+       
 
     | _ -> not_implemented()
 
@@ -187,10 +220,15 @@ let built_ins () =
 *)
 
 let compile_prog p =
-  let main_code = compile_instr_list p in
+  let main_code = compile_instr_list (Env.empty) 0 p in
   let built_ins_code = built_ins () in
   { text =
      comment "Code principal"
+  
+  @@ sub gp sp oi (!nb_Gvar * data_size)
+  @@ sub sp gp oi (data_size)
+  @@ sub fp sp oi (data_size)
+
   @@ label "main"
   @@ main_code
        
