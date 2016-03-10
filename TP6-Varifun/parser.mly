@@ -37,6 +37,7 @@
 %token SLASH
 %token STAR
 %token THEN
+%token REC
 
 %nonassoc IN
 %nonassoc ELSE
