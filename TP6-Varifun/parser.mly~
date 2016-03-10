@@ -65,11 +65,7 @@ instr:
 | expr EOI
     { Icompute $1 }
 | LET IDENT EQUAL expr EOI
-        { Ilet ($2, $4) }
-| LET IDENT ident_list EQUAL expr EOI
-        { Ifun (false, $2, $3, $5) }
-| LET REC IDENT ident_list EQUAL expr EOI
-        { Ifun (true, $2, $3, $5) }
+    { Ilet ($2, $4) }
 ;
 
 simple_expr:
@@ -79,21 +75,7 @@ simple_expr:
     { $2 }
 | IDENT
     { mk_node (Eident $1) }
-;
 
-ident_list:
-| IDENT
-    { [$1] }
-| IDENT ident_list
-    { $1::$2 }
-;
-
-se_list:
-| simple_expr
-    { [$1] }
-| simple_expr se_list
-    { $1::$2 }
-;
 
 expr:
 | simple_expr
@@ -127,9 +109,6 @@ expr:
 
 | LET IDENT EQUAL expr IN expr
     { mk_node (Eletin ($2, $4, $6)) }
-
-| IDENT se_list
-    { mk_node (Eapp ($2))}
 
 | PRINT_INT simple_expr
     { mk_node (Eprint_int $2) }

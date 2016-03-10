@@ -154,6 +154,12 @@ let rec compile_expr env nxt_var e =
       (* Désalloue le résultat de [e1] et déplace le résultat de [e2]. *)
       @@ desalloc_code
 
+
+    | Eapp (id, e::il ) ->
+      let e_code = compile_expr env nxt_var e
+      and env2    = Env.add id (Local_car nxt_var) env
+      and nxt_env2 = 
+
     | Eprint_int e ->
       let e_code = compile_expr env nxt_var e in
       e_code
