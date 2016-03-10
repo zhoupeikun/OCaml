@@ -193,6 +193,22 @@ let rec compile_instr_list env nxt_global il =
       let il_code, il_fun_code, glob = compile_instr_list env nxt_global il in
       e_code @@ alloc_code @@ il_code, il_fun_code, glob
 
+    (*not finished*)
+    | Ifun (_, id, para,, e) :: il ->
+       let new_env = 
+       let e_code  = compile_expr new_env 0 e in
+       let f_code  = 
+         label id
+         @@ sauvegarde fp et ra
+         @@ Nouvel fp
+         @@ e_code
+         @@ placer le resultat
+         @@ jr ra
+       in
+       let tl_code, tl_fun = compile_instr_list env nxt_global il in
+         t1_code, t1_fun
+         @@ f_code
+
     | _ -> not_implemented()
 
 
