@@ -152,13 +152,7 @@ let rec compile_expr env nxt_var e =
 	 comme variable locale. *)
       @@ e2_code
       (* Désalloue le résultat de [e1] et déplace le résultat de [e2]. *)
-      @@ desalloc_code
-
-
-    | Eapp (id, e::il ) ->
-      let e_code = compile_expr env nxt_var e
-      and env2    = Env.add id (Local_car nxt_var) env
-      and nxt_env2 = 
+      @@ desalloc_code 
 
     | Eprint_int e ->
       let e_code = compile_expr env nxt_var e in
@@ -194,11 +188,11 @@ let rec compile_instr_list env nxt_global il =
       e_code @@ alloc_code @@ il_code, il_fun_code, glob
 
     (*not finished*)
-    | Ifun (_, id, para,, e) :: il ->
-       let new_env = 
+    | Ifun (_, id, para, e) :: il ->
+       let new_env = List.fold_left (fun env id -> Env.add id (Global_var nxt_global) env) env para in
        let e_code  = compile_expr new_env 0 e in
        let f_code  = 
-         label id
+         @@ label id
          @@ sauvegarde fp et ra
          @@ Nouvel fp
          @@ e_code
