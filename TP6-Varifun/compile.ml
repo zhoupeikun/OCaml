@@ -189,19 +189,24 @@ let rec compile_instr_list env nxt_global il =
 
     (*not finished*)
     | Ifun (_, id, para, e) :: il ->
+       let env = Env.add id (Global_var nxt_global) env in
        let new_env = List.fold_left (fun env id -> Env.add id (Global_var nxt_global) env) env para in
        let e_code  = compile_expr new_env 0 e in
        let f_code  = 
-         @@ label id
-         @@ sauvegarde fp et ra
-         @@ Nouvel fp
+         label id
+         @@ push fp
+         @@ push ra
+         @@ sub fp sp oi data_size
          @@ e_code
-         @@ placer le resultat
+         @@ pop ra 
+         @@ pop fp
+         @@ push a0
          @@ jr ra
        in
-       let tl_code, tl_fun = compile_instr_list env nxt_global il in
-         t1_code, t1_fun
-         @@ f_code
+       let il_code, il_fun_code, glob = compile_instr_list env nxt_global il in
+          f_code
+            
+         @@ il_code, il_fun_code, glob  
 
     | _ -> not_implemented()
 
