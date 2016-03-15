@@ -8,5 +8,5 @@ parser.cmo : ast.cmi parser.cmi
 parser.cmx : ast.cmi parser.cmi
 compile.cmo : mips.cmi ast.cmi
 compile.cmx : mips.cmx ast.cmi
-main.cmo : parser.cmi mips.cmi lexer.cmo error.cmo compile.cmo
-main.cmx : parser.cmx mips.cmx lexer.cmx error.cmx compile.cmx
+main.cmo : parser.cmi mips.cmi error.cmo compile.cmo
+main.cmx : parser.cmx mips.cmx error.cmx compile.cmx
