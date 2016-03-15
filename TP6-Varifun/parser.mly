@@ -70,7 +70,7 @@ instr:
 | LET IDENT ident_list EQUAL expr EOI
         { Ifun (false, $2, $3, $5) }
 | LET REC IDENT ident_list EQUAL expr EOI
-        { Ifun (true, $2, $3, $5) }
+        { Ifun (true, $3, $4, $6) }
 ;
 
 simple_expr:
@@ -130,7 +130,7 @@ expr:
     { mk_node (Eletin ($2, $4, $6)) }
 
 | IDENT se_list
-    { mk_node (Eapp ($2))}
+    { mk_node (Eapp ($1, $2))}
 
 | PRINT_INT simple_expr
     { mk_node (Eprint_int $2) }
