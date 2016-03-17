@@ -1,0 +1,14 @@
+mips.cmi :
+mips.cmo : mips.cmi
+mips.cmx : mips.cmi
+ast.cmi :
+error.cmo : ast.cmi
+error.cmx : ast.cmi
+parser.cmo : ast.cmi parser.cmi
+parser.cmx : ast.cmi parser.cmi
+typing.cmo : error.cmo ast.cmi
+typing.cmx : error.cmx ast.cmi
+compile.cmo : mips.cmi ast.cmi
+compile.cmx : mips.cmx ast.cmi
+main.cmo : typing.cmo parser.cmi mips.cmi error.cmo compile.cmo
+main.cmx : typing.cmx parser.cmx mips.cmx error.cmx compile.cmx
