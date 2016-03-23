@@ -55,17 +55,28 @@ let rec type_expr t_env ne =
         | Uminus -> check_types e.pos e.typ Tint; upd_type ne Tint
       end
     
-   | Eif(e1, e2, e3) -> 
-    begin     
+    | Eif (e1, e2, e3) ->
       type_expr t_env e1;
-        check_types e1.pos e1.typ Tint; upd_type ne Tint;
+      check_types e1.pos Tbool e1.typ;
       type_expr t_env e2;
-        check_types e2.pos e2.typ Tbool; upd_type ne Tbool;
+      type_expr t_env e3;
+      check_types e2.pos e2.typ e3.typ;
+      upd_type ne e2.typ
+
+      (*
+      type_expr t_env e2;
+        check_types e2.pos e2.typ Tint; upd_type ne Tbool;
       type_expr t_env e3;
         check_types e3.pos e3.typ Tint; upd_type ne Tint;
-    end
+      *)
 
    | Eletin (id, e1, e2) -> 
+      type_expr t_env e1;
+      let new_env = Env.add id (TA_var e1.typ) t_env in
+        type_expr new_env e2;
+        upd_type ne e2.typ
+
+ (*  
       type_expr t_env e1;
          begin
             match Env.find id t_env with
@@ -75,7 +86,46 @@ let rec type_expr t_env ne =
             match Env.find id t_env with
             | TA_var ty -> upd_type ne ty
             | TA_fun _ -> error(Function_identifier id) ne.pos
+  end
+  *)  
+
+    |Eprint_int e -> 
+      type_expr t_env e;
+      check_types e.pos Tint e.typ;
+      upd_type ne Tunit
+
+    |Eapp (id, nl) ->
+      begin
+           try
+             match Env.find id t_env with
+             | TA_var _ -> () 
+             | TA_fun (typ, listTypesArguments) ->
+                upd_type ne typ;
+                List.iter2 (fun e1 e2 -> type_expr t_env e1; check_types e1.pos e1.typ e2) nl listTypesArguments
+           with Not_found -> error(Unknown_identifier id) ne.pos
+         end   
+    | Ebinop(op, e1, e2) ->
+      type_expr t_env e1;
+      type_expr t_env e2;
+        begin
+          match op with
+          | ( Beq  | Bneq ) -> 
+            check_types e1.pos e1.typ e2.typ;
+            upd_type ne Tbool;
+          | ( Blt  | Ble  | Bgt  | Bge ) -> 
+            check_types e1.pos Tint e1.typ;
+            check_types e2.pos Tint e2.typ;
+            upd_type ne Tbool
+          | ( Badd | Bsub | Bmul | Bdiv ) -> 
+            check_types e1.pos Tint e1.typ;
+            check_types e2.pos Tint e2.typ;
+            upd_type ne Tint
+          | ( Band | Bor ) ->
+            check_types e1.pos Tbool e1.typ;
+            check_types e2.pos Tbool e2.typ;
+            upd_type ne Tbool
         end
+
 
     | Eprint_newline e ->
       (* Calcule le type de l'expression [e], et met à jour le
