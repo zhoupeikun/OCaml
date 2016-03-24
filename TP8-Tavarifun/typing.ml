@@ -47,6 +47,21 @@ let rec type_expr t_env ne =
 	  | TA_fun _  -> error (Function_identifier id) ne.pos
       with Not_found  -> error (Unknown_identifier id)  ne.pos
     end
+
+    | Egetref e -> begin
+      type_expr t_env e;
+      match e.typ with
+        Tref ty -> upd_type ne ty
+      | ty -> error (Type_error(Tref ty, ty)) e.pos
+    end
+
+    | Esetref(e1, e2) -> begin
+      type_expr t_env e1;
+      type_expr t_env e2;
+      match e1.typ with
+        Tref ty -> check_types e1.pos ty e2.typ; upd_type ne Tunit
+      | ty -> error (Type_error(Tref ty, e2.typ)) e2.pos
+    end
       
     | Eunop (op, e) ->
       type_expr t_env e;
@@ -54,6 +69,7 @@ let rec type_expr t_env ne =
 	match op with
 	| Unot   -> check_types e.pos Tbool e.typ; Tbool
 	| Uminus -> check_types e.pos Tint e.typ;  Tint
+    | Uref   -> Tref(e.typ);
 	| _      -> not_implemented()
       end in
       upd_type ne ty
@@ -99,16 +115,16 @@ let rec type_expr t_env ne =
 
     | Eapp (id, args) -> begin
       let ty = try Env.find id t_env
-	with Not_found -> error (Unknown_identifier id) ne.pos
+        with Not_found -> error (Unknown_identifier id) ne.pos
       in
       match ty with
-	| TA_fun (ty, ty_args) ->
-	  List.iter2 (fun a ty_a ->
-	    type_expr t_env a;
-	    check_types a.pos ty_a a.typ
-	  ) args ty_args;
-	  upd_type ne ty
-	| _ -> error (Not_a_function id) ne.pos
+      | TA_fun (ty, ty_args) ->
+        List.iter2 (fun a ty_a ->
+          type_expr t_env a;
+          check_types a.pos ty_a a.typ
+        ) args ty_args;
+        upd_type ne ty
+      | _ -> error (Not_a_function id) ne.pos
     end
 
     | Eprint_int e ->
@@ -125,6 +141,8 @@ let rec type_expr t_env ne =
       check_types e.pos Tunit e.typ;
       (* Met à jour le type de l'expression complète. *)
       upd_type ne Tunit
+
+
 
     | _ -> not_implemented()
 

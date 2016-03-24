@@ -10,5 +10,5 @@ typing.cmo : error.cmo ast.cmi
 typing.cmx : error.cmx ast.cmi
 compile.cmo : mips.cmi ast.cmi
 compile.cmx : mips.cmx ast.cmi
-main.cmo : typing.cmo parser.cmi mips.cmi error.cmo compile.cmo
-main.cmx : typing.cmx parser.cmx mips.cmx error.cmx compile.cmx
+main.cmo : typing.cmo parser.cmi mips.cmi lexer.cmo error.cmo compile.cmo
+main.cmx : typing.cmx parser.cmx mips.cmx lexer.cmx error.cmx compile.cmx

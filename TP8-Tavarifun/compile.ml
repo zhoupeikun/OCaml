@@ -92,7 +92,36 @@ let rec compile_expr env nxt_var e =
 	| Local_var k  
 	| Parameter k -> lw v0 areg (offset, fp)
 	in
-	load @@ push v0
+	  load @@ push v0
+
+    | Egetref e ->
+      let e_code = compile_expr env nxt_var e in
+      e_code
+      @@ pop v0
+      @@ lw a0 areg (header_size, v0)
+      @@ push a0
+
+    | Esetref (e1, e2) ->
+      let e1_code = compile_expr env nxt_var e1 in
+      let e2_code = compile_expr env nxt_var e2 in
+      e1_code @@ e2_code
+      @@ pop a2
+      @@ pop a1
+      @@ sw a2 areg (header_size, a1)
+      @@ push zero
+        
+
+    | Eunop (uref, e) ->
+      let e_code = compile_expr env nxt_var e in
+      e_code
+      @@ pop a0
+      @@ malloc (header_size + data_size)
+    (* Header = 1 pour les références *)
+      @@ peek a1 (* récupère l'adress *)
+      @@ li a2 1
+      @@ sw a2 areg (0, a1)
+    (* Stockage valeur e *)
+      @@ sw a0 areg (header_size, a1)
 
     | Eunop (op, e) ->
       let e_code = compile_expr env nxt_var e in
