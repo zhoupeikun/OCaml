@@ -29,6 +29,11 @@ let not_implemented() = failwith "Not implemented"
 let rec check_types l ty1 ty2 = 
   match ty1, ty2 with
     | Tunit, Tunit | Tbool, Tbool | Tint, Tint -> ()
+    | Tref ty1, Tref ty2 -> check_types l ty1 ty2
+    | Toption ty1, Toption ty2 -> check_types l ty1 ty2
+    | Tnone, Tnone -> ()
+    | Tnone, Toption _ -> ()
+    | Toption _, Tnone -> ()
     | _, _ -> type_error l ty1 ty2
     
 let rec type_expr t_env ne =
@@ -39,6 +44,7 @@ let rec type_expr t_env ne =
 
     | Econst (Cint i)  -> upd_type ne Tint
     | Econst (Cbool b) -> upd_type ne Tbool
+    | Econst (Cnone)   -> upd_type ne Tnoe
 
     | Eident id -> begin
       try
@@ -69,10 +75,19 @@ let rec type_expr t_env ne =
 	match op with
 	| Unot   -> check_types e.pos Tbool e.typ; Tbool
 	| Uminus -> check_types e.pos Tint e.typ;  Tint
-    | Uref   -> Tref(e.typ);
+        | Uref   -> Tref(e.typ);
+        | Usome  -> Toption(e.ty);
 	| _      -> not_implemented()
       end in
       upd_type ne ty
+
+    | Eletopt (id, e1, e2) -> begin
+        type_expr t_env e1;
+        match e1.typ with
+        | Toption typ -> type_expr (Env.add id (TA_var typ) t_env) e2;
+                         upd_type ne e2.typ
+        | typ         -> error (Type_error (Toption typ, typ)) e1.pos
+      end
 
     | Ebinop (op, e1, e2) ->
       type_expr t_env e1;
