@@ -21,7 +21,7 @@ let rec bs_insert (elt: int) (bst: bs_tree) : unit =
 ;;
 
 let rec add_list_to_bst (l: int_list) (bst: bs_tree) : unit =
-  bs_insert l.head bst;
+  let a = bs_insert l.head bst in
   if l.tail == None
   then ()
   else let Some tl = l.tail in add_list_to_bst tl bst
@@ -48,10 +48,14 @@ let bst: bs_tree = mk_bst l ;;
 print_int 2 ;;
 
 let rec infix (t: bs_tree) : unit =
+  let a =
   if t.left != None
   then let Some l = t.left in infix l
   else ();
+  in
+  let b =
   print_int t.elt;
+  in
   if t.right != None
   then let Some r = t.right in infix r
   else ()

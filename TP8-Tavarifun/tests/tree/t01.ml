@@ -21,10 +21,12 @@ let t : tree =
 print_int 1 ;;
 
 let rec prefix (t: tree) : unit =
-  print_int t.elt;
+  let a = print_int t.elt in
+  let b = 
   if t.left != None
   then let Some l = t.left in prefix l
   else ();
+  in
   if t.right != None
   then let Some r = t.right in prefix r
   else ()
@@ -34,10 +36,14 @@ prefix t ;;
 print_int 2 ;;
 
 let rec infix (t: tree) : unit =
+  let a =
   if t.left != None
   then let Some l = t.left in infix l
   else ();
+  in
+  let b =
   print_int t.elt;
+  in
   if t.right != None
   then let Some r = t.right in infix r
   else ()

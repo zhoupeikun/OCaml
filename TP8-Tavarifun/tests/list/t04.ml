@@ -11,7 +11,7 @@ let cons (hd: int) (tl: int_list) : int_list =
 print_int 1 ;;
 
 let rec print_list (l: int_list) : unit =
-  print_int l.head;
+  let a = print_int l.head in
   if l.tail == None
   then ()
   else let Some tl = l.tail in print_list tl
