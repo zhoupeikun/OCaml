@@ -44,7 +44,7 @@ let rec type_expr t_env ne =
 
     | Econst (Cint i)  -> upd_type ne Tint
     | Econst (Cbool b) -> upd_type ne Tbool
-    | Econst (Cnone)   -> upd_type ne Tnoe
+    | Econst (Cnone)   -> upd_type ne Tnone
 
     | Eident id -> begin
       try
@@ -76,7 +76,7 @@ let rec type_expr t_env ne =
 	| Unot   -> check_types e.pos Tbool e.typ; Tbool
 	| Uminus -> check_types e.pos Tint e.typ;  Tint
         | Uref   -> Tref(e.typ);
-        | Usome  -> Toption(e.ty);
+        | Usome  -> Toption(e.typ);
 	| _      -> not_implemented()
       end in
       upd_type ne ty
