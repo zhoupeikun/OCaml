@@ -2,7 +2,7 @@ open Ast
 open Mips
 open Format
 
-(* Constantes pour la représentation des données. *)
+(* Constantes pour la repr茅sentation des donn茅es. *)
 let word_size   = 4
 let data_size   = word_size
 (* DIFF *)
@@ -11,19 +11,19 @@ let header_size = word_size
 
 let not_implemented() = failwith "Not implemented"
 
-(* Création d'une nouvelle étiquette pour les branchements. *)
+(* Cr茅ation d'une nouvelle 茅tiquette pour les branchements. *)
 let new_label =
   let c = ref 0 in
   fun () -> incr c; sprintf "__label__%05i" !c
 
 
-(* Définition de l'environnement. *)
+(* D茅finition de l'environnement. *)
 module Env = Map.Make(String)
 
 (* L'environnement contient des variables globales ou locales, et des
-   paramètres de fonctions. Chacun est associé à un numéro (son numéro
-   d'ordre d'apparition parmi les éléments visibles à cet endroit).
-   Le décalage correspondant au numéro d'ordre est calculé différemment en
+   param猫tres de fonctions. Chacun est associ茅 à un num茅ro (son num茅ro
+   d'ordre d'apparition parmi les 茅l茅ments visibles à cet endroit).
+   Le d茅calage correspondant au num茅ro d'ordre est calcul茅 diff茅remment en
    fonction du type de variable. *)
 type var_loc =
   | Global_var of int
@@ -37,18 +37,18 @@ let get_var_offset = function
 
 (* val push : register -> text 
   [push reg] place le contenu de [reg] au sommet de la pile.
-  $sp pointe sur l'adresse de la dernière case occupée. *)
+  $sp pointe sur l'adresse de la derni猫re case occup茅e. *)
 let push reg =
   sub sp sp oi word_size
   @@ sw reg areg (0, sp)
 
 (* val peek : register -> text
-  [peek reg] place la valeur en sommet de pile dans [reg] sans dépiler. *)
+  [peek reg] place la valeur en sommet de pile dans [reg] sans d茅piler. *)
 let peek reg =
   lw reg areg (data_size - 4, sp)
 
 (* val pop : register -> text
-  [pop reg] place la valeur en sommet de pile dans [reg] et dépile. *)
+  [pop reg] place la valeur en sommet de pile dans [reg] et d茅pile. *)
 let pop reg =
   lw reg areg (0, sp)
   @@ add sp sp oi data_size
@@ -56,19 +56,19 @@ let pop reg =
 
 (* DIFF *)    
 
-(* Allocation dans le tas d'un nombre de mot donné en argument. *)
+(* Allocation dans le tas d'un nombre de mot donn茅 en argument. *)
 (* Utilise les registres [v0], [v1], [s0],
-   place au sommet de la pile l'adresse du bloc alloué. *)
-(* Le programme termine si la limite est dépassée. *)
+   place au sommet de la pile l'adresse du bloc allou茅. *)
+(* Le programme termine si la limite est d茅pass茅e. *)
 let malloc size =
-     la s0 alab "nxt_loc"   (* Sauvegarde de l'adresse de début du bloc. *)
+     la s0 alab "nxt_loc"   (* Sauvegarde de l'adresse de d茅but du bloc. *)
   @@ lw   v0 areg (0, s0)
   @@ push v0                
-  @@ add  v0 v0 oi size     (* Calcul de l'adresse de fin. Arrêt si dépassement. *)
+  @@ add  v0 v0 oi size     (* Calcul de l'adresse de fin. Arr锚t si d茅passement. *)
   @@ la  v1 alab "max_loc"
   @@ lw  v1 areg (0, v1)
   @@ bgt v0 v1 "out_of_memory"
-  @@ sw  v0 areg (0, s0)    (* Allocation confirmée : modification de nxt_loc. *)
+  @@ sw  v0 areg (0, s0)    (* Allocation confirm茅e : modification de nxt_loc. *)
 
 (* ENDIFF *)
 
@@ -81,6 +81,7 @@ let rec compile_expr env nxt_var e =
 	| Cbool true  -> li v0 1 @@ push v0
 	| Cunit       -> push zero
 	| Cbool false -> push zero
+        | Cnone       -> li v0 0 @@ push v0 
 	| _           -> not_implemented()
     end
 
@@ -116,8 +117,8 @@ let rec compile_expr env nxt_var e =
       e_code
       @@ pop a0
       @@ malloc (header_size + data_size)
-    (* Header = 1 pour les références *)
-      @@ peek a1 (* récupère l'adress *)
+    (* Header = 1 pour les r茅f茅rences *)
+      @@ peek a1 (* r茅cup猫re l'adress *)
       @@ li a2 1
       @@ sw a2 areg (0, a1)
     (* Stockage valeur e *)
@@ -132,6 +133,37 @@ let rec compile_expr env nxt_var e =
 	| Uminus -> sub v0 zero oreg v0
 	| _      -> not_implemented()
       ) @@ push v0
+
+    | Eunop (Usome, e) ->
+       let e_code = compile_expr env nxt_var e in
+       e_code
+       @@ pop a0
+       @@ malloc (header_size + data_size)
+       @@ peek a1
+       @@ li a2 2
+       @@ sw a2 areg (0, a1)
+       @@ sw a0 areg (header_size, a1)
+
+    | Eletopt (id, e1, e2) ->
+       let e1_code = compile_expr env nxt_var e1 in
+       let e1_code_value =
+         e1_code
+         @@ pop v0
+         @@ lw a0 areg (header_size, v0)
+         @@ push a0
+       in
+       let env2 = Env.add id (Local_var nxt_var) env
+       and nct_var2 = nxt_var +1
+       in
+       let e2_code = compile_expr env2 nxt_var2 e2 in
+       let desalloc_code =
+         pop v0
+         @@ pop zero
+         @@ push v0
+       in
+       e1_code_value
+       @@ e2_code
+       @@ desalloc_code
 
     | Ebinop ((Band | Bor) as op, e1, e2) ->
       let e1_code = compile_expr env nxt_var e1
@@ -194,30 +226,30 @@ let rec compile_expr env nxt_var e =
       and nxt_var2 = nxt_var + 1
       in
       let e2_code = compile_expr env2 nxt_var2 e2 in
-      (* Code pour la désallocation de la variable locale. *)
+      (* Code pour la d茅sallocation de la variable locale. *)
       let desalloc_code = pop v0 @@ pop zero @@ push v0 in
-      (* Calcule [e1] et empile le résultat. *)
+      (* Calcule [e1] et empile le r茅sultat. *)
       e1_code
-      (* Calcule [e2] et empile le résultat, en utilisant [e1]
+      (* Calcule [e2] et empile le r茅sultat, en utilisant [e1]
 	 comme variable locale. *)
       @@ e2_code
-      (* Désalloue le résultat de [e1] et déplace le résultat de [e2]. *)
+      (* D茅salloue le r茅sultat de [e1] et d茅place le r茅sultat de [e2]. *)
       @@ desalloc_code
 
     | Eapp (id, args) ->
       (* On empile les arguments de [a_n] à [a_1].
-	 On exécute le corps de la fonction (qui s'occupera de la sauvegarde
+	 On ex茅cute le corps de la fonction (qui s'occupera de la sauvegarde
 	 de [ra] et [fp]).
-	 On prend le résultat et on le recopie à la place de [a_n] avant
+	 On prend le r茅sultat et on le recopie à la place de [a_n] avant
 	 de rendre la main. *)
       let args_code, _ = compile_args env nxt_var args in
       args_code
       @@ jal id
-      (* Récupère le résultat résultat au sommet de la pile. *)
+      (* R茅cup猫re le r茅sultat r茅sultat au sommet de la pile. *)
       @@ pop v0
-      (* On suppose que la fonction appelée a placé le résultat à la place
+      (* On suppose que la fonction appel茅e a plac茅 le r茅sultat à la place
 	 des sauvegardes de [ra] et [fp], et on nettoie les arguments.
-	 Potentiellement, on pourrait tout faire faire par l'appelée. *)
+	 Potentiellement, on pourrait tout faire faire par l'appel茅e. *)
       @@ add sp sp oi (data_size * List.length args)
       @@ push v0
 
@@ -277,13 +309,13 @@ let rec compile_instr_list env nxt_global il =
 	@@ push ra (* Sauvegarde de [fp] et [ra]. *)
 	@@ push fp
 	@@ sub fp sp oi data_size
-	(* Définition du nouveau [fp], qui pointe sur le mot de la pile
-	   immédiatement sous celui où est stocké l'ancien [fp]. *)
+	(* D茅finition du nouveau [fp], qui pointe sur le mot de la pile
+	   imm茅diatement sous celui o霉 est stock茅 l'ancien [fp]. *)
 	@@ e_code
-	@@ pop v0 (* Sauvegarde du résultat. *)
+	@@ pop v0 (* Sauvegarde du r茅sultat. *)
 	@@ pop fp
 	@@ pop ra
-	@@ push v0 (* Restauration du résultat. *)
+	@@ push v0 (* Restauration du r茅sultat. *)
 	@@ jr ra
       in
       let il_code, il_fun_code, glob = compile_instr_list env nxt_global il in
@@ -297,11 +329,11 @@ let init glob =
   @@ move gp sp
   @@ sub  fp sp oi data_size
   (* DIFF *)
-  @@ li a0 1024            (* Appel système sbrk pour réserver 1024 octets. *)
+  @@ li a0 1024            (* Appel syst猫me sbrk pour r茅server 1024 octets. *)
   @@ li v0 9
   @@ syscall    
-  @@ la a0 alab "nxt_loc"  (* L'appel système a placé dans v0 l'adresse de début
-                              de la zone réservée, à mettre dans nxt_loc. *)
+  @@ la a0 alab "nxt_loc"  (* L'appel syst猫me a plac茅 dans v0 l'adresse de d茅but
+                              de la zone r茅serv茅e, à mettre dans nxt_loc. *)
   @@ sw v0 areg (0, a0)
   @@ add v0 v0 oi 1024     (* Calcul de max_loc, 1024 octets plus loin. *)
   @@ la a0 alab "max_loc"
@@ -334,7 +366,7 @@ let built_ins () =
   @@ jr ra
 
   (* DIFF *)
-  (* Arrêt d'urgence en cas de dépassement de la capacité du tas. *)
+  (* Arr锚t d'urgence en cas de d茅passement de la capacit茅 du tas. *)
   @@ label "out_of_memory"
   @@ la a0 alab "__const_out_of_memory"
   @@ li v0 4
