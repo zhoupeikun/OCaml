@@ -153,7 +153,7 @@ let rec compile_expr env nxt_var e =
          @@ push a0
        in
        let env2 = Env.add id (Local_var nxt_var) env
-       and nct_var2 = nxt_var +1
+       and nxt_var2 = nxt_var +1
        in
        let e2_code = compile_expr env2 nxt_var2 e2 in
        let desalloc_code =
